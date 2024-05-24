@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SharedWorker - Cross-Tab Communication with JavaScript</title>
+  </head>
+  <body>
+    <div id="countdown"></div>
+
+    <script>
+      const countdownDisplay = document.getElementById("countdown");
+
+      const worker = new SharedWorker("scripts/countdownWorker.js");
+
+      function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const pad = (num) => String(num).padStart(2, "0");
+
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      }
+
+      const startCountdown = (duration) => {
+        worker.port.postMessage({ duration });
+        const countdownEnd = localStorage.getItem("countdownEnd");
+        console.log(duration);
+        if (!countdownEnd) {
+          const endTime = Date.now() + duration;
+          localStorage.setItem("countdownEnd", endTime.toString());
+        }
+      };
+
+      const updateRemainingTime = (time) => {
+        if (time <= 0) {
+          localStorage.removeItem("countdownEnd");
+        } else {
+          countdownDisplay.textContent = `Countdown: ${formatTime(
+            time
+          )} seconds`;
+        }
+      };
+
+      worker.port.onmessage = (event) => {
+        updateRemainingTime(event.data);
+      };
+
+      const checkCountdown = () => {
+        const countdownEnd = localStorage.getItem("countdownEnd");
+        if (countdownEnd) {
+          const remaining = parseInt(countdownEnd) - Date.now();
+          if (remaining > 0) {
+            startCountdown(remaining);
+          } else {
+            localStorage.removeItem("countdownEnd");
+          }
+        } else {
+          startCountdown(60000);
+        }
+      };
+
+      checkCountdown();
+    </script>
+  </body>
+</html>
